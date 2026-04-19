@@ -11,12 +11,17 @@ use RuntimeException;
  */
 class PlaidlyException extends RuntimeException
 {
+    private readonly int $statusCode;
+    private readonly string $errorCode;
+
     public function __construct(
         string $message,
-        private readonly int $statusCode,
-        private readonly string $code = 'UNKNOWN_ERROR',
+        int $statusCode,
+        string $errorCode = 'UNKNOWN_ERROR',
     ) {
         parent::__construct($message);
+        $this->statusCode = $statusCode;
+        $this->errorCode = $errorCode;
     }
 
     /** HTTP status code returned by the API. */
@@ -26,8 +31,8 @@ class PlaidlyException extends RuntimeException
     }
 
     /** Machine-readable error code from the API response. */
-    public function getCode(): string
+    public function getErrorCode(): string
     {
-        return $this->code;
+        return $this->errorCode;
     }
 }
