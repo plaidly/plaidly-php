@@ -43,11 +43,39 @@ final class HttpClient
     }
 
     /**
+     * Execute a request with up to 3 attempts on transient (5xx / cURL) failures.
+     *
      * @param array<string, mixed>|null $body
      * @return array<string, mixed>
      * @throws PlaidlyException
      */
     private function request(string $method, string $path, ?array $body = null): array
+    {
+        $lastError = null;
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            if ($attempt > 0) {
+                usleep((int) (2 ** $attempt * 500000));
+            }
+            try {
+                return $this->doRequest($method, $path, $body);
+            } catch (PlaidlyException $e) {
+                if ($e->getStatusCode() < 500) {
+                    throw $e;
+                }
+                $lastError = $e;
+            }
+        }
+        throw $lastError;
+    }
+
+    /**
+     * Execute a single HTTP request.
+     *
+     * @param array<string, mixed>|null $body
+     * @return array<string, mixed>
+     * @throws PlaidlyException
+     */
+    private function doRequest(string $method, string $path, ?array $body = null): array
     {
         $ch = curl_init();
         $url = rtrim($this->baseUrl, '/') . $path;
