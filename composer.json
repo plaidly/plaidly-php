@@ -1,0 +1,22 @@
+{
+    "name": "plaidly/plaidly-php",
+    "description": "Official Plaidly PHP SDK",
+    "version": "0.1.0",
+    "type": "library",
+    "keywords": ["plaidly", "crypto", "payments", "sdk"],
+    "license": "MIT",
+    "authors": [
+        { "name": "Plaidly", "email": "dev@plaidly.io" }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-hash": "*"
+    },
+    "autoload": {
+        "psr-4": { "Plaidly\\": "src/" }
+    },
+    "repositories": [],
+    "homepage": "https://github.com/plaidly/plaidly-php"
+}
