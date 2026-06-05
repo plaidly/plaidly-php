@@ -2,13 +2,6 @@
 
 Official PHP SDK for the [Plaidly](https://plaidly.io) cryptocurrency payment API.
 
-Types and the low-level HTTP endpoints are auto-generated from the Plaidly
-OpenAPI 3.1 spec with [`jane-php/open-api-3-1`](https://github.com/janephp/janephp).
-The `PlaidlyClient` class in this package is a hand-written wrapper that
-plugs the generated client into a cURL-backed PSR-18 transport, injects
-the `X-API-Key` header, retries on transient 5xx / network failures, and
-surfaces typed `PlaidlyException` values.
-
 ## Installation
 
 ```bash
@@ -18,79 +11,133 @@ composer require plaidly/plaidly-php
 ## Requirements
 
 - PHP 8.1+
-- ext-curl
-- ext-json
-- ext-hash
+- ext-curl, ext-json, ext-hash
 
-## Usage
+## Quick start
 
 ```php
 <?php
 
 require 'vendor/autoload.php';
 
-use Plaidly\PlaidlyClient;
-use Plaidly\Generated\Model\CreatePaymentSessionRequest;
-use Plaidly\Generated\Model\PaymentMethod;
+$client = new \Plaidly\PlaidlyClient($_ENV['PLAIDLY_API_KEY']);
 
-$client = new PlaidlyClient($_ENV['PLAIDLY_API_KEY']);
+// Create a payment session
+$session = $client->paymentSessions->create(
+    amount: 100.0,
+    expiresIn: '15m',
+    chain: 'ethereum',
+    token: 'USDC',
+    network: 'mainnet',
+    metadata: ['order_id' => 'A-1'],
+);
 
-$session = $client->createPaymentSession(new CreatePaymentSessionRequest([
-    'amount'        => 10.00,
-    'expiresIn'     => '15m',
-    'paymentMethod' => new PaymentMethod([
-        'methodID' => 0,
-        'chain'    => 'solana',
-        'token'    => 'USDC',
-        'network'  => 'mainnet',
-    ]),
-]));
-
-echo $session->getAddress(); // Send funds here
+echo $session['address'];     // deposit address
+echo $session['payment_url']; // hosted checkout URL
+echo $session['qr_data'];     // payment URI for QR encoding
 ```
 
-## Webhook Verification
+Poll a session (public, no auth required for checkout):
+
+```php
+$session = $client->paymentSessions->get($session['session_id']);
+// status: pending -> partial_paid -> paid -> finalizing -> confirmed -> completed
+```
+
+`completed` and `confirmed` both mean the payment succeeded; `expired` and
+`failed` are terminal failures.
+
+## Demo / sandbox
+
+```php
+$demo = $client->paymentSessions->createDemo(chain: 'ethereum', token: 'USDC');
+$client->paymentSessions->simulate($demo['session_id']); // instantly completes
+```
+
+## Public lookups
+
+```php
+$methods = $client->paymentMethods->list();        // enabled chain/token pairs
+$rates   = $client->rates->get(['ETH', 'SOL']);    // USD spot rates
+$faucets = $client->sandbox->faucets();            // testnet faucet URLs
+```
+
+## Merchants & payouts
+
+```php
+$merchant = $client->merchants->register('Acme', 'https://acme.test/webhook');
+// $merchant['api_key'] and $merchant['webhook_secret'] are returned once — store them.
+
+$me = $client->merchants->me();
+
+$payout = $client->payouts->create(
+    destinationAddress: '0xabc...',
+    amount: 25.0,
+    tokenSymbol: 'ETH',
+    network: 'ethereum',
+);
+```
+
+## Webhook verification
+
+Plaidly signs each delivery with your `webhook_secret`. The
+`X-Plaidly-Signature` header has the form `t=<unix>,v1=<hex>`, where the hex is
+`HMAC-SHA256(secret, "<t>.<rawBody>")`. Verification is constant-time and
+enforces a 5-minute timestamp tolerance by default.
 
 ```php
 <?php
 
 use Plaidly\Webhook;
 
-$payload = file_get_contents('php://input');
+$payload   = file_get_contents('php://input');
 $signature = $_SERVER['HTTP_X_PLAIDLY_SIGNATURE'] ?? '';
 
 if (!Webhook::verifySignature($payload, $signature, $_ENV['PLAIDLY_WEBHOOK_SECRET'])) {
-    http_response_code(401);
-    exit('Invalid signature');
+    http_response_code(400);
+    exit('invalid signature');
 }
 
-// handle event
+$event = json_decode($payload, true);
+// $event['event_type']: payment_session.completed | expired | partial_paid
+
 http_response_code(204);
 ```
 
-## Escape hatch — generated client
+## Error handling
+
+Non-2xx responses throw typed exceptions, all extending
+`Plaidly\Exception\PlaidlyException`:
+
+| Exception | When |
+|-----------|------|
+| `AuthenticationException` | 401 / 403 |
+| `InvalidRequestException` | other 4xx |
+| `NotFoundException` | 404 |
+| `ConflictException` | 409 |
+| `RateLimitException` | 429 |
+| `ApiServerException` | 5xx (retried automatically) |
+| `TransportException` | network/cURL failure (retried automatically) |
 
 ```php
-$merchant = $client->raw()->getMe();
+use Plaidly\Exception\ApiException;
+
+try {
+    $client->paymentSessions->get('missing');
+} catch (ApiException $e) {
+    $e->getStatusCode(); // int|null
+    $e->getErrorCode();  // int|null
+    $e->getBody();        // decoded response body
+}
 ```
 
-## Regenerating from the spec
-
-The committed copy of the Plaidly spec lives at `spec/openapi.yaml`.
+## Development
 
 ```bash
 composer install
-composer generate              # runs vendor/bin/jane-openapi generate
+composer test   # phpunit
 ```
 
-Generated output: `src/Generated/`. Do not edit by hand.
-
-Pinned versions:
-
-- `jane-php/open-api-3-1 ^7.6`
-- `jane-php/open-api-runtime ^7.6`
-- `php-http/curl-client ^2.4`
-
-## API Reference
+## API reference
 
 See [docs.plaidly.io](https://docs.plaidly.io) for full API documentation.
