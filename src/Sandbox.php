@@ -7,21 +7,23 @@ namespace Plaidly;
 use Plaidly\Exception\PlaidlyException;
 
 /**
- * Sandbox-only helpers.
+ * Sandbox-only helpers (/v1/sandbox). Public endpoints.
  */
 final class Sandbox
 {
-    public function __construct(private readonly HttpClient $http) {}
+    public function __construct(private readonly HttpClientInterface $http)
+    {
+    }
 
     /**
-     * Return available testnet faucets.
+     * List testnet faucet URLs per chain/network.
      *
-     * @return array<int, array<string, string>>
+     * @return array<string, string> Map of "chain:network" to faucet URL.
      * @throws PlaidlyException
      */
     public function faucets(): array
     {
-        /** @var array<int, array<string, string>> */
+        /** @var array<string, string> */
         return $this->http->get('/v1/sandbox/faucets');
     }
 }

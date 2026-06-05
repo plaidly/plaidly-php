@@ -7,42 +7,46 @@ namespace Plaidly;
 use Plaidly\Exception\PlaidlyException;
 
 /**
- * Operations on payouts.
+ * Operations on payouts (/v1/payouts).
  */
 final class Payouts
 {
-    public function __construct(private readonly HttpClient $http) {}
+    public function __construct(private readonly HttpClientInterface $http)
+    {
+    }
 
     /**
-     * Request a payout.
+     * Request a new payout.
      *
+     * @param string $destinationAddress Blockchain address to send the payout to.
+     * @param float  $amount             Amount to pay out.
+     * @param string $tokenSymbol        Token symbol, e.g. "SOL", "ETH".
+     * @param string $network            Blockchain network, e.g. "solana", "ethereum".
      * @return array<string, mixed>
      * @throws PlaidlyException
      */
     public function create(
-        string $amount,
-        string $currency,
-        string $chain,
-        string $address,
-        string $network = 'mainnet',
+        string $destinationAddress,
+        float $amount,
+        string $tokenSymbol,
+        string $network,
     ): array {
         return $this->http->post('/v1/payouts', [
-            'amount'   => $amount,
-            'currency' => $currency,
-            'chain'    => $chain,
-            'network'  => $network,
-            'address'  => $address,
+            'destination_address' => $destinationAddress,
+            'amount'              => $amount,
+            'token_symbol'        => $tokenSymbol,
+            'network'             => $network,
         ]);
     }
 
     /**
-     * Fetch a payout by ID.
+     * Get payout status by ID.
      *
      * @return array<string, mixed>
      * @throws PlaidlyException
      */
-    public function get(string $id): array
+    public function get(string $payoutId): array
     {
-        return $this->http->get('/v1/payouts/' . rawurlencode($id));
+        return $this->http->get('/v1/payouts/' . rawurlencode($payoutId));
     }
 }
