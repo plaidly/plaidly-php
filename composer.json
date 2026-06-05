@@ -14,29 +14,11 @@
         "php": ">=8.1",
         "ext-curl": "*",
         "ext-json": "*",
-        "ext-hash": "*",
-        "php-http/curl-client": "^2.4",
-        "nyholm/psr7": "^1.8",
-        "php-http/message": "^1.16",
-        "php-http/client-common": "^2.7",
-        "php-http/discovery": "^1.19",
-        "jane-php/open-api-runtime": "^7.6",
-        "symfony/serializer": "^6.0 || ^7.0 || ^8.0"
+        "ext-hash": "*"
     },
     "autoload": {
         "psr-4": { "Plaidly\\": "src/" }
     },
-    "config": {
-        "allow-plugins": {
-            "php-http/discovery": true
-        }
-    },
-    "homepage": "https://github.com/plaidly/plaidly-php",
-    "require-dev": {
-        "jane-php/open-api-3": "^7.6",
-        "jane-php/open-api-3-1": "^7.6"
-    },
-    "scripts": {
-        "generate": "jane-openapi generate"
-    }
+    "repositories": [],
+    "homepage": "https://github.com/plaidly/plaidly-php"
 }

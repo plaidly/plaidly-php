@@ -1,8 +1,0 @@
-<?php
-
-return [
-    'openapi-file' => __DIR__ . '/spec/openapi.yaml',
-    'namespace'    => 'Plaidly\\Generated',
-    'directory'    => __DIR__ . '/src/Generated',
-    'strict'       => false,
-];
